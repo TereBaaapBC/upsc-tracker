@@ -1,0 +1,2205 @@
+index.html
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UPSC 360° Preparation Command Centre</title>
+
+  <!-- Tailwind CSS CDN with class-based dark mode -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+
+  <!-- React 18 & Babel Standalone for in-browser JSX execution -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 antialiased selection:bg-indigo-500 selection:text-white">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    // ==========================================
+    // LOCAL VAULT PERSISTENCE KEYS
+    // ==========================================
+    const appId = typeof window.__app_id !== 'undefined' && window.__app_id ? window.__app_id : 'upsc-360-html-vault';
+    const LOCAL_STORAGE_KEY = `upsc_360_vault_${appId}_v2`;
+    const LOCAL_AUTH_KEY = `upsc_360_auth_session_${appId}`;
+
+    // ==========================================
+    // CUSTOM SVG ICON SYSTEM
+    // ==========================================
+    const ICONS = {
+      dashboard: (
+        <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
+      ),
+      table: (
+        <path d="M3 3h18v18H3V3zm0 6h18M3 15h18M9 3v18M15 3v18" />
+      ),
+      folder: (
+        <path d="M2 6a2 2 0 012-2h4l2 2h10a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+      ),
+      layers: (
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+      ),
+      users: (
+        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zm14 10v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+      ),
+      clock: (
+        <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zm0-14v4l3 3" />
+      ),
+      check: (
+        <path d="M20 6L9 17l-5-5" />
+      ),
+      plus: (
+        <path d="M12 5v14M5 12h14" />
+      ),
+      trash: (
+        <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+      ),
+      search: (
+        <path d="M21 21l-4.35-4.35M19 11a8 8 0 11-16 0 8 8 0 0116 0z" />
+      ),
+      target: (
+        <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zm0-4a6 6 0 100-12 6 6 0 000 12zm0-4a2 2 0 100-4 2 2 0 000 4z" />
+      ),
+      book: (
+        <path d="M4 19.5A2.5 2.5 0 016.5 17H20M4 19.5A2.5 2.5 0 006.5 22H20V2H6.5A2.5 2.5 0 004 4.5v15z" />
+      ),
+      edit: (
+        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+      ),
+      award: (
+        <path d="M12 15a7 7 0 100-14 7 7 0 000 14zm-3.79-1.11L7 23l5-3 5 3-1.21-9.12" />
+      ),
+      play: (
+        <path d="M5 3l14 9-14 9V3z" />
+      ),
+      pause: (
+        <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+      ),
+      refresh: (
+        <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
+      ),
+      sun: (
+        <path d="M12 17a5 5 0 100-10 5 5 0 000 10zm0-16v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+      ),
+      moon: (
+        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+      ),
+      upload: (
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+      ),
+      file: (
+        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8" />
+      ),
+      download: (
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+      ),
+      compass: (
+        <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z" />
+      ),
+      cloud: (
+        <path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z" />
+      )
+    };
+
+    const Icon = ({ name, className = 'w-5 h-5' }) => (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={className}
+      >
+        {ICONS[name] || ICONS.layers}
+      </svg>
+    );
+
+    // ==========================================
+    // INITIAL SEED DATA (ALL PROGRESS AT ZERO: 0%)
+    // ==========================================
+    const INITIAL_SYLLABUS = [
+      { id: 's1', paper: 'GS-I', subject: 'Modern Indian History', topic: 'Freedom Struggle: 1857 to 1947 & Key Personalities', stage: 0, pyqCount: 18 },
+      { id: 's2', paper: 'GS-I', subject: 'Art & Culture', topic: 'Temple Architecture, Classical Dances & Buddhist Art', stage: 0, pyqCount: 14 },
+      { id: 's3', paper: 'GS-I', subject: 'Geography', topic: 'Monsoon Mechanism, Ocean Currents & Geomorphology', stage: 0, pyqCount: 16 },
+      { id: 's4', paper: 'GS-II', subject: 'Indian Polity', topic: 'Fundamental Rights, Basic Structure & Parliamentary Committees', stage: 0, pyqCount: 25 },
+      { id: 's5', paper: 'GS-II', subject: 'Governance', topic: 'e-Governance, Citizen Charters, Social Audit & RTI', stage: 0, pyqCount: 11 },
+      { id: 's6', paper: 'GS-II', subject: 'International Relations', topic: 'India-Neighbourhood, Indo-Pacific, G20 & Global South', stage: 0, pyqCount: 15 },
+      { id: 's7', paper: 'GS-III', subject: 'Indian Economy', topic: 'Monetary Policy, Fiscal Consolidation, Inclusive Growth & MSP', stage: 0, pyqCount: 22 },
+      { id: 's8', paper: 'GS-III', subject: 'Environment & Ecology', topic: 'Biodiversity Hotspots, COP Summits, EIA & Climate Finance', stage: 0, pyqCount: 28 },
+      { id: 's9', paper: 'GS-III', subject: 'Internal Security', topic: 'Cyber Security, Left-Wing Extremism & Border Management', stage: 0, pyqCount: 10 },
+      { id: 's10', paper: 'GS-IV', subject: 'Ethics & Integrity', topic: 'Foundational Values for Civil Services & Emotional Intelligence', stage: 0, pyqCount: 14 },
+      { id: 's11', paper: 'GS-IV', subject: 'Case Studies', topic: 'Administrative Dilemmas, Probity in Governance & Corporate Ethics', stage: 0, pyqCount: 12 },
+      { id: 's12', paper: 'Essay', subject: 'Philosophical & Socio-Econ', topic: 'Brainstorming Frameworks, Anecdotes & Multi-Dimensional Flow', stage: 0, pyqCount: 20 },
+      { id: 's13', paper: 'CSAT', subject: 'Comprehension & Quant', topic: 'Logical Reasoning, Data Interpretation & Reading Passages', stage: 0, pyqCount: 80 }
+    ];
+
+    // ==========================================
+    // UPSC OPTIONAL SUBJECTS CATALOG (STARTS AT 0%)
+    // ==========================================
+    const OPTIONAL_CATALOG = {
+      'PSIR (Political Science & IR)': [
+        { id: 'opt1', paper: 'Paper-I', section: 'Part A: Political Theory', topic: 'Plato, Aristotle, Machiavelli, Hobbes, Locke, Marx & Gramsci', stage: 0, pyqCount: 24 },
+        { id: 'opt2', paper: 'Paper-I', section: 'Part A: Concepts', topic: 'Justice (Rawls), Equality, Rights, Democracy & Theories of State', stage: 0, pyqCount: 19 },
+        { id: 'opt3', paper: 'Paper-I', section: 'Part B: Indian Govt & Politics', topic: 'Indian Nationalism, Making of Constitution, Caste, Ethnicity & Party System', stage: 0, pyqCount: 28 },
+        { id: 'opt4', paper: 'Paper-II', section: 'Part A: Comparative & IR Theory', topic: 'Realism, Liberalism, Constructivism, Geopolitics & UN Reforms', stage: 0, pyqCount: 22 },
+        { id: 'opt5', paper: 'Paper-II', section: 'Part B: India & the World', topic: 'India’s Foreign Policy, Non-Alignment, Strategic Autonomy, USA, China & Neighbourhood', stage: 0, pyqCount: 30 }
+      ],
+      'Sociology': [
+        { id: 'soc1', paper: 'Paper-I', section: 'Foundations of Sociology', topic: 'Karl Marx, Emile Durkheim, Max Weber, Talcott Parsons & R.K. Merton', stage: 0, pyqCount: 32 },
+        { id: 'soc2', paper: 'Paper-I', section: 'Stratification & Social Change', topic: 'Social Stratification, Mobility, Work, Economic Life, Religion & Science', stage: 0, pyqCount: 25 },
+        { id: 'soc3', paper: 'Paper-II', section: 'Indian Society Structure', topic: 'Perspectives (Indology, Structural Functionalism, Marxist, Subaltern) & Caste System', stage: 0, pyqCount: 28 },
+        { id: 'soc4', paper: 'Paper-II', section: 'Social Changes in India', topic: 'Sanskritization, Westernization, Secularization, Agrarian Class & Social Movements', stage: 0, pyqCount: 26 }
+      ],
+      'Anthropology': [
+        { id: 'ant1', paper: 'Paper-I', section: 'Social-Cultural Anthropology', topic: 'Marriage, Family, Kinship, Economic & Political Organization, Anthropological Theories', stage: 0, pyqCount: 26 },
+        { id: 'ant2', paper: 'Paper-I', section: 'Biological & Archaeological', topic: 'Human Evolution, Primatology, Human Genetics, Prehistoric Archaeology', stage: 0, pyqCount: 24 },
+        { id: 'ant3', paper: 'Paper-II', section: 'Indian Anthropology', topic: 'Ethnic & Linguistic Elements, Sacred Complex, Nature-Man-Spirit Complex', stage: 0, pyqCount: 22 },
+        { id: 'ant4', paper: 'Paper-II', section: 'Tribal India', topic: 'Tribal Problems, PESA, Forest Rights Act, PVTGs & Constitutional Safeguards', stage: 0, pyqCount: 30 }
+      ],
+      'Geography': [
+        { id: 'geo1', paper: 'Paper-I', section: 'Physical Geography', topic: 'Geomorphology, Climatology, Oceanography, Biogeography & Environmental Geo', stage: 0, pyqCount: 28 },
+        { id: 'geo2', paper: 'Paper-I', section: 'Human Geography', topic: 'Perspectives in Human Geography, Economic Geo, Population & Settlement Models', stage: 0, pyqCount: 25 },
+        { id: 'geo3', paper: 'Paper-II', section: 'Geography of India - Physical', topic: 'Physiography, Drainage Systems, Indian Monsoon, Soils & Natural Vegetation', stage: 0, pyqCount: 24 },
+        { id: 'geo4', paper: 'Paper-II', section: 'Resources, Agriculture & Regional', topic: 'Agro-Climatic Zones, Green Revolution, Industrial Corridors & Regional Planning', stage: 0, pyqCount: 26 }
+      ],
+      'Public Administration': [
+        { id: 'pub1', paper: 'Paper-I', section: 'Administrative Theory', topic: 'Classical & Human Relations Thinkers (Taylor, Weber, Simon, Mayo, Follett)', stage: 0, pyqCount: 27 },
+        { id: 'pub2', paper: 'Paper-I', section: 'Public Policy & Accountability', topic: 'New Public Management, Good Governance, Delegated Legislation & Financial Admin', stage: 0, pyqCount: 23 },
+        { id: 'pub3', paper: 'Paper-II', section: 'Indian Administration', topic: 'Kautilya Arthashastra, Mughal & British Legacy, Cabinet Secretariat, PMO & All India Services', stage: 0, pyqCount: 29 },
+        { id: 'pub4', paper: 'Paper-II', section: 'District & Welfare Admin', topic: 'Role of District Collector, 73rd & 74th Amendments, ARC Reports & Law and Order', stage: 0, pyqCount: 25 }
+      ],
+      'History': [
+        { id: 'his1', paper: 'Paper-I', section: 'Ancient India', topic: 'Indus Valley, Vedic Period, Mauryan Empire, Guptas & Map Sites', stage: 0, pyqCount: 30 },
+        { id: 'his2', paper: 'Paper-I', section: 'Medieval India', topic: 'Delhi Sultanate, Bhakti & Sufi Movements, Vijayanagara & Mughal Empire', stage: 0, pyqCount: 26 },
+        { id: 'his3', paper: 'Paper-II', section: 'Modern India', topic: 'British Expansion, Economic Impact of Colonial Rule, Social Reforms & Freedom Struggle', stage: 0, pyqCount: 28 },
+        { id: 'his4', paper: 'Paper-II', section: 'World History', topic: 'Enlightenment, Industrial Revolution, World Wars, Cold War & Decolonization', stage: 0, pyqCount: 24 }
+      ]
+    };
+
+    const NOTE_CATEGORIES = [
+      'GS-I (History, Society, Geo)',
+      'GS-II (Polity, Governance, IR)',
+      'GS-III (Economy, Env, Security)',
+      'GS-IV (Ethics & Case Studies)',
+      'Optional Paper-I',
+      'Optional Paper-II',
+      'Current Affairs & Editorials',
+      'Essay & Quotes Fodder',
+      'Prelims PYQ & CSAT'
+    ];
+
+    const STAGES = [
+      { level: 0, label: 'Unread', color: 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300' },
+      { level: 1, label: '1st Reading', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' },
+      { level: 2, label: 'Notes Ready', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300' },
+      { level: 3, label: 'Revised 2x', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300' },
+      { level: 4, label: 'Exam Ready', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300' }
+    ];
+
+    const INITIAL_TASKS = [
+      { id: 't1', title: 'The Hindu & PIB Editorial Synthesis (45 mins)', tag: 'Current Affairs', completed: false },
+      { id: 't2', title: 'Laxmikanth Revision: Emergency & Federalism Chapters', tag: 'GS-II', completed: false },
+      { id: 't3', title: 'Optional Paper-I: 90 mins Core Thinkers & 2 PYQ Answers', tag: 'Optional', completed: false },
+      { id: 't4', title: 'Solve 50 Prelims PYQs (Environment & Science Tech)', tag: 'Prelims MCQ', completed: false },
+      { id: 't5', title: 'CSAT 15 Passages + Number System Practice', tag: 'CSAT', completed: false }
+    ];
+
+    const INITIAL_NOTES = [
+      {
+        id: 'n1',
+        title: 'Sixteenth Finance Commission & Vertical Devolution Debates',
+        category: 'GS-II (Polity, Governance, IR)',
+        subFolder: 'Fiscal Federalism',
+        source: 'The Hindu / PRS',
+        date: 'Oct 2026',
+        content: 'Article 280 constitutional mandate. Key tension between equity (income distance) vs efficiency (demographic performance & tax effort). Useful for Federalism & Fiscal Policy questions.',
+        keywords: ['Article 280', 'Fiscal Federalism', 'Horizontal Equity'],
+        fileAttachment: null
+      },
+      {
+        id: 'n2',
+        title: 'Optional Thinker Notes: Gramsci’s Hegemony & Civil Society',
+        category: 'Optional Paper-I',
+        subFolder: 'Core Thinkers',
+        source: 'Handwritten Summary',
+        date: 'Oct 2026',
+        content: 'Distinction between War of Position and War of Manoeuvre. Superstructure divided into Political Society (coercion) and Civil Society (consent/hegemony).',
+        keywords: ['Gramsci', 'Hegemony', 'Optional Paper-I'],
+        fileAttachment: null
+      }
+    ];
+
+    const INITIAL_MOCKS = [
+      { id: 'm1', name: 'Vision Abhyaas Full Length #1', type: 'Prelims GS-I', correct: 62, incorrect: 24, date: '2026-10-05' },
+      { id: 'm2', name: 'ForumIAS Simulator Test #2', type: 'Prelims GS-I', correct: 66, incorrect: 21, date: '2026-10-12' },
+      { id: 'm3', name: 'NextIAS All India Mock #3', type: 'Prelims GS-I', correct: 71, incorrect: 18, date: '2026-10-20' }
+    ];
+
+    const INITIAL_PEERS = [
+      { id: 'p1', name: 'Aarav Sharma (Rank 42 Mentor)', role: 'IRS Mentor', hoursToday: 7.5, status: 'Reviewing Optional & GS-IV Copies', streak: 48 },
+      { id: 'p2', name: 'Meera Nair', role: 'Peer - Sociology Optional', hoursToday: 8.2, status: 'Solving Vision Test #14', streak: 34 },
+      { id: 'p3', name: 'Rohan Deshmukh', role: 'Peer - PSIR Optional', hoursToday: 6.0, status: 'Laxmikanth 3rd Revision', streak: 21 },
+      { id: 'p4', name: 'You (Command Officer)', role: 'CSE Aspirant', hoursToday: 0.0, status: 'Starting Fresh from 0% Today', streak: 1 }
+    ];
+
+    const INITIAL_THINKERS = [
+      { id: 'th1', scholar: 'Hannah Arendt', quote: 'Power corresponds to the human ability not just to act, but to act in concert.', paper: 'Paper-I' },
+      { id: 'th2', scholar: 'M.N. Srinivas', quote: 'Caste is not disappearing in modern India; it is adapting through Sanskritization and secular mobilization.', paper: 'Paper-II' }
+    ];
+
+    // ==========================================
+    // MAIN APPLICATION COMPONENT
+    // ==========================================
+    function App() {
+      const [syncStatus, setSyncStatus] = useState('synced');
+      const [isHydrated, setIsHydrated] = useState(false);
+      const lastSavedSnapshotRef = useRef('');
+      const backupInputRef = useRef(null);
+      const fileInputRef = useRef(null);
+
+      // Authentication State (Persisted across browser refreshes)
+      const [isLoggedIn, setIsLoggedIn] = useState(() => {
+        try {
+          return localStorage.getItem(LOCAL_AUTH_KEY) === 'true';
+        } catch {
+          return false;
+        }
+      });
+      const [usernameInput, setUsernameInput] = useState('');
+      const [passwordInput, setPasswordInput] = useState('');
+      const [authError, setAuthError] = useState('');
+
+      const [darkMode, setDarkMode] = useState(true);
+      const [activeTab, setActiveTab] = useState('dashboard');
+      const [notification, setNotification] = useState(null);
+
+      // Persistent States (All starting at 0% progress)
+      const [syllabus, setSyllabus] = useState(INITIAL_SYLLABUS);
+      const [selectedOptional, setSelectedOptional] = useState('PSIR (Political Science & IR)');
+      const [optionalData, setOptionalData] = useState(OPTIONAL_CATALOG);
+      const [optionalThinkers, setOptionalThinkers] = useState(INITIAL_THINKERS);
+
+      const [tasks, setTasks] = useState(INITIAL_TASKS);
+      const [notes, setNotes] = useState(INITIAL_NOTES);
+      const [mocks, setMocks] = useState(INITIAL_MOCKS);
+      const [peers, setPeers] = useState(INITIAL_PEERS);
+
+      const showToast = (msg) => {
+        setNotification(msg);
+        setTimeout(() => setNotification(null), 3200);
+      };
+
+      // Sync root HTML dark class
+      useEffect(() => {
+        if (darkMode) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }, [darkMode]);
+
+      // Handle Account Login
+      const handleLogin = (e) => {
+        e.preventDefault();
+        if (usernameInput.trim() === 'x7ansh' && passwordInput.trim() === '727830') {
+          setIsLoggedIn(true);
+          setAuthError('');
+          try {
+            localStorage.setItem(LOCAL_AUTH_KEY, 'true');
+          } catch {}
+          showToast('Welcome back, Officer x7ansh! Secure vault unlocked.');
+        } else {
+          setAuthError('Invalid credentials. Use username: x7ansh and password: 727830');
+        }
+      };
+
+      const fillDemoCredentials = () => {
+        setUsernameInput('x7ansh');
+        setPasswordInput('727830');
+        setAuthError('');
+      };
+
+      const handleLogout = () => {
+        setIsLoggedIn(false);
+        setUsernameInput('');
+        setPasswordInput('');
+        try {
+          localStorage.removeItem(LOCAL_AUTH_KEY);
+        } catch {}
+        showToast('Logged out of account vault.');
+      };
+
+      // Filters & Forms
+      const [selectedPaper, setSelectedPaper] = useState('ALL');
+      const [selectedNoteCategory, setSelectedNoteCategory] = useState('ALL');
+      const [searchQuery, setSearchQuery] = useState('');
+      const [newTaskTitle, setNewTaskTitle] = useState('');
+      const [newTaskTag, setNewTaskTag] = useState('GS-I');
+
+      const [newOptionalTopic, setNewOptionalTopic] = useState({
+        paper: 'Paper-I',
+        section: '',
+        topic: ''
+      });
+      const [newThinker, setNewThinker] = useState({
+        scholar: '',
+        quote: '',
+        paper: 'Paper-I'
+      });
+
+      const [newNote, setNewNote] = useState({
+        title: '',
+        category: 'GS-II (Polity, Governance, IR)',
+        subFolder: 'General Notes',
+        source: 'Self Notes / Upload',
+        content: '',
+        keywords: ''
+      });
+      const [uploadCategory, setUploadCategory] = useState('GS-I (History, Society, Geo)');
+      const [uploadSubFolder, setUploadSubFolder] = useState('Handwritten PDF / Class Notes');
+      const [dragActive, setDragActive] = useState(false);
+
+      const [mockForm, setMockForm] = useState({
+        name: '',
+        correct: 65,
+        incorrect: 20
+      });
+
+      // Pomodoro / Deep Study Timer State
+      const [timerSeconds, setTimerSeconds] = useState(50 * 60);
+      const [timerRunning, setTimerRunning] = useState(false);
+      const [timerMode, setTimerMode] = useState('50m Deep Work');
+
+      // Hydrate from LocalStorage Vault on Mount
+      useEffect(() => {
+        try {
+          const savedLocal = localStorage.getItem(LOCAL_STORAGE_KEY);
+          if (savedLocal) {
+            const data = JSON.parse(savedLocal);
+            setDarkMode(typeof data.darkMode === 'boolean' ? data.darkMode : true);
+            setSyllabus(Array.isArray(data.syllabus) ? data.syllabus : INITIAL_SYLLABUS);
+            setSelectedOptional(data.selectedOptional || 'PSIR (Political Science & IR)');
+            setOptionalData(
+              data.optionalData
+                ? typeof data.optionalData === 'string'
+                  ? JSON.parse(data.optionalData)
+                  : data.optionalData
+                : OPTIONAL_CATALOG
+            );
+            setOptionalThinkers(Array.isArray(data.optionalThinkers) ? data.optionalThinkers : INITIAL_THINKERS);
+            setTasks(Array.isArray(data.tasks) ? data.tasks : INITIAL_TASKS);
+            setNotes(Array.isArray(data.notes) ? data.notes : INITIAL_NOTES);
+            setMocks(Array.isArray(data.mocks) ? data.mocks : INITIAL_MOCKS);
+            setPeers(Array.isArray(data.peers) ? data.peers : INITIAL_PEERS);
+          }
+        } catch (err) {
+          console.warn('Could not read local vault:', err);
+        }
+        setIsHydrated(true);
+        setSyncStatus('synced');
+      }, []);
+
+      // Auto-Save to LocalStorage Vault on Any State Change
+      useEffect(() => {
+        if (!isHydrated) return;
+
+        const currentPayload = {
+          darkMode,
+          syllabus,
+          selectedOptional,
+          optionalData,
+          optionalThinkers,
+          tasks,
+          notes,
+          mocks,
+          peers
+        };
+
+        const serializedCurrent = JSON.stringify(currentPayload);
+        if (serializedCurrent === lastSavedSnapshotRef.current) return;
+
+        setSyncStatus('saving');
+        const timer = setTimeout(() => {
+          try {
+            localStorage.setItem(LOCAL_STORAGE_KEY, serializedCurrent);
+            lastSavedSnapshotRef.current = serializedCurrent;
+            setSyncStatus('synced');
+          } catch (e) {
+            console.warn('Storage quota warning:', e);
+            setSyncStatus('error');
+          }
+        }, 300);
+
+        return () => clearTimeout(timer);
+      }, [
+        isHydrated,
+        darkMode,
+        syllabus,
+        selectedOptional,
+        optionalData,
+        optionalThinkers,
+        tasks,
+        notes,
+        mocks,
+        peers
+      ]);
+
+      // Export & Import JSON Backup Handlers
+      const handleExportBackup = () => {
+        const backupObject = {
+          darkMode,
+          syllabus,
+          selectedOptional,
+          optionalData,
+          optionalThinkers,
+          tasks,
+          notes,
+          mocks,
+          peers,
+          exportedAt: new Date().toISOString()
+        };
+        const blob = new Blob([JSON.stringify(backupObject, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `upsc_360_backup_${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('Backup file downloaded to your device!');
+      };
+
+      const handleImportBackup = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          try {
+            const parsed = JSON.parse(String(ev.target?.result || '{}'));
+            if (parsed.syllabus) setSyllabus(parsed.syllabus);
+            if (parsed.selectedOptional) setSelectedOptional(parsed.selectedOptional);
+            if (parsed.optionalData) setOptionalData(parsed.optionalData);
+            if (parsed.optionalThinkers) setOptionalThinkers(parsed.optionalThinkers);
+            if (parsed.tasks) setTasks(parsed.tasks);
+            if (parsed.notes) setNotes(parsed.notes);
+            if (parsed.mocks) setMocks(parsed.mocks);
+            if (parsed.peers) setPeers(parsed.peers);
+            showToast('Backup restored and synced to vault!');
+          } catch (err) {
+            showToast('Invalid backup JSON file.');
+          }
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+      };
+
+      // Timer Effect
+      useEffect(() => {
+        let interval = null;
+        if (timerRunning && timerSeconds > 0) {
+          interval = setInterval(() => {
+            setTimerSeconds((prev) => prev - 1);
+          }, 1000);
+        } else if (timerSeconds === 0 && timerRunning) {
+          setTimerRunning(false);
+          showToast('Study Sprint Complete! Take a 10-minute breather.');
+        }
+        return () => clearInterval(interval);
+      }, [timerRunning, timerSeconds]);
+
+      const formatTime = (totalSeconds) => {
+        const mins = Math.floor(totalSeconds / 60);
+        const secs = totalSeconds % 60;
+        return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      };
+
+      const setPresetTimer = (mins, label) => {
+        setTimerRunning(false);
+        setTimerSeconds(mins * 60);
+        setTimerMode(label);
+      };
+
+      // Computed Analytics
+      const syllabusProgress = useMemo(() => {
+        const maxScore = syllabus.length * 4;
+        if (maxScore === 0) return 0;
+        const currentScore = syllabus.reduce((acc, item) => acc + item.stage, 0);
+        return Math.round((currentScore / maxScore) * 100);
+      }, [syllabus]);
+
+      const currentOptionalTopics = useMemo(
+        () => optionalData[selectedOptional] || [],
+        [optionalData, selectedOptional]
+      );
+
+      const optionalProgress = useMemo(() => {
+        const maxScore = currentOptionalTopics.length * 4;
+        if (maxScore === 0) return 0;
+        const currentScore = currentOptionalTopics.reduce((acc, item) => acc + item.stage, 0);
+        return Math.round((currentScore / maxScore) * 100);
+      }, [currentOptionalTopics]);
+
+      const completedTasksCount = tasks.filter((t) => t.completed).length;
+
+      const uploadedFilesCount = useMemo(
+        () => notes.filter((n) => Boolean(n.fileAttachment)).length,
+        [notes]
+      );
+
+      const calcPrelimsScore = (correct, incorrect) => {
+        const pos = Number(correct) * 2;
+        const neg = Number(incorrect) * (2 / 3);
+        return (pos - neg).toFixed(2);
+      };
+
+      const liveCalcScore = calcPrelimsScore(mockForm.correct, mockForm.incorrect);
+      const liveUnattempted = Math.max(0, 100 - (Number(mockForm.correct) + Number(mockForm.incorrect)));
+
+      // Handlers
+      const cycleTopicStage = (id) => {
+        setSyllabus((prev) =>
+          prev.map((item) =>
+            item.id === id ? { ...item, stage: (item.stage + 1) % 5 } : item
+          )
+        );
+        showToast('GS topic mastery stage updated!');
+      };
+
+      const cycleOptionalStage = (id) => {
+        setOptionalData((prev) => ({
+          ...prev,
+          [selectedOptional]: (prev[selectedOptional] || []).map((item) =>
+            item.id === id ? { ...item, stage: (item.stage + 1) % 5 } : item
+          )
+        }));
+        showToast(`${selectedOptional.split(' ')[0]} Optional topic stage updated!`);
+      };
+
+      const resetAllProgressToZero = () => {
+        setSyllabus((prev) => prev.map((item) => ({ ...item, stage: 0 })));
+        setOptionalData((prev) => {
+          const updated = {};
+          Object.keys(prev).forEach((key) => {
+            updated[key] = prev[key].map((item) => ({ ...item, stage: 0 }));
+          });
+          return updated;
+        });
+        setTasks((prev) => prev.map((t) => ({ ...t, completed: false })));
+        showToast('All GS, Optional & Task progress reset to 0%!');
+      };
+
+      const handleAddOptionalTopic = (e) => {
+        e.preventDefault();
+        if (!newOptionalTopic.topic.trim()) return;
+        const newEntry = {
+          id: 'opt_' + Date.now(),
+          paper: newOptionalTopic.paper,
+          section: newOptionalTopic.section.trim() || 'Core Unit',
+          topic: newOptionalTopic.topic.trim(),
+          stage: 0,
+          pyqCount: 10
+        };
+        setOptionalData((prev) => ({
+          ...prev,
+          [selectedOptional]: [...(prev[selectedOptional] || []), newEntry]
+        }));
+        setNewOptionalTopic({ paper: 'Paper-I', section: '', topic: '' });
+        showToast('Custom Optional micro-topic added at 0%!');
+      };
+
+      const handleAddThinker = (e) => {
+        e.preventDefault();
+        if (!newThinker.scholar.trim() || !newThinker.quote.trim()) return;
+        setOptionalThinkers([
+          {
+            id: 'th_' + Date.now(),
+            scholar: newThinker.scholar.trim(),
+            quote: newThinker.quote.trim(),
+            paper: newThinker.paper
+          },
+          ...optionalThinkers
+        ]);
+        setNewThinker({ scholar: '', quote: '', paper: 'Paper-I' });
+        showToast('Scholar / Thinker added to Optional Fodder Bank!');
+      };
+
+      const deleteThinker = (id) => {
+        setOptionalThinkers((prev) => prev.filter((t) => t.id !== id));
+        showToast('Thinker quote removed.');
+      };
+
+      const handleAddTask = (e) => {
+        e.preventDefault();
+        if (!newTaskTitle.trim()) return;
+        setTasks([
+          {
+            id: 't_' + Date.now(),
+            title: newTaskTitle.trim(),
+            tag: newTaskTag,
+            completed: false
+          },
+          ...tasks
+        ]);
+        setNewTaskTitle('');
+        showToast('Directive added to today’s battle plan.');
+      };
+
+      const toggleTask = (id) => {
+        setTasks((prev) =>
+          prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
+        );
+      };
+
+      const deleteTask = (id) => {
+        setTasks((prev) => prev.filter((t) => t.id !== id));
+      };
+
+      const processUploadedFiles = (fileList) => {
+        if (!fileList || fileList.length === 0) return;
+        const filesArray = Array.from(fileList);
+
+        filesArray.forEach((file) => {
+          const sizeKB = (file.size / 1024).toFixed(1);
+          const ext = file.name.split('.').pop()?.toUpperCase() || 'FILE';
+
+          const createNoteEntry = (contentSnippet, persistentUrl) => {
+            const newUploadedNote = {
+              id: 'up_' + Date.now() + Math.random().toString(36).slice(2, 6),
+              title: file.name.replace(/\.[^/.]+$/, ''),
+              category: uploadCategory,
+              subFolder: uploadSubFolder || 'Uploaded Files',
+              source: `Uploaded ${ext} (${sizeKB} KB)`,
+              date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+              content: contentSnippet,
+              keywords: [ext, uploadCategory.split(' ')[0], uploadSubFolder || 'Notes'],
+              fileAttachment: {
+                name: file.name,
+                size: `${sizeKB} KB`,
+                type: ext,
+                url: persistentUrl
+              }
+            };
+            setNotes((prev) => [newUploadedNote, ...prev]);
+          };
+
+          if (
+            file.type.startsWith('text/') ||
+            file.name.endsWith('.md') ||
+            file.name.endsWith('.txt') ||
+            file.name.endsWith('.csv')
+          ) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+              const textSnippet = String(ev.target?.result || '').slice(0, 2000);
+              const dataUrl = `data:text/plain;charset=utf-8,${encodeURIComponent(textSnippet)}`;
+              createNoteEntry(textSnippet || `Uploaded document: ${file.name}`, dataUrl);
+            };
+            reader.readAsText(file);
+          } else if (file.size <= 150 * 1024) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+              const dataUrl = String(ev.target?.result || '');
+              createNoteEntry(
+                `Categorized file uploaded under "${uploadCategory}" → Folder: "${uploadSubFolder}". Click 'Open / Download File' below to view your saved ${ext} document.`,
+                dataUrl
+              );
+            };
+            reader.readAsDataURL(file);
+          } else {
+            const fileUrl = URL.createObjectURL(file);
+            createNoteEntry(
+              `Categorized file uploaded under "${uploadCategory}" → Folder: "${uploadSubFolder}" (${sizeKB} KB). File metadata is permanently saved in your vault.`,
+              fileUrl
+            );
+          }
+        });
+
+        showToast(`${filesArray.length} file(s) uploaded & saved into "${uploadCategory}"!`);
+      };
+
+      const handleFileChange = (e) => {
+        processUploadedFiles(e.target.files);
+        e.target.value = '';
+      };
+
+      const handleDrop = (e) => {
+        e.preventDefault();
+        setDragActive(false);
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          processUploadedFiles(e.dataTransfer.files);
+        }
+      };
+
+      const handleAddNote = (e) => {
+        e.preventDefault();
+        if (!newNote.title.trim() || !newNote.content.trim()) return;
+        const created = {
+          id: 'n_' + Date.now(),
+          title: newNote.title.trim(),
+          category: newNote.category,
+          subFolder: newNote.subFolder.trim() || 'General',
+          source: newNote.source,
+          date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+          content: newNote.content.trim(),
+          keywords: newNote.keywords
+            ? newNote.keywords.split(',').map((k) => k.trim()).filter(Boolean)
+            : [newNote.category.split(' ')[0], newNote.subFolder],
+          fileAttachment: null
+        };
+        setNotes([created, ...notes]);
+        setNewNote({
+          title: '',
+          category: 'GS-II (Polity, Governance, IR)',
+          subFolder: 'General Notes',
+          source: 'The Hindu',
+          content: '',
+          keywords: ''
+        });
+        showToast('Categorized Note saved to Vault!');
+      };
+
+      const deleteNote = (id) => {
+        setNotes((prev) => prev.filter((n) => n.id !== id));
+        showToast('Note removed from vault.');
+      };
+
+      const handleLogMock = (e) => {
+        e.preventDefault();
+        if (!mockForm.name.trim()) return;
+        const newEntry = {
+          id: 'm_' + Date.now(),
+          name: mockForm.name.trim(),
+          type: 'Prelims GS-I',
+          correct: Math.min(100, Math.max(0, Number(mockForm.correct))),
+          incorrect: Math.min(100, Math.max(0, Number(mockForm.incorrect))),
+          date: new Date().toISOString().slice(0, 10)
+        };
+        setMocks([newEntry, ...mocks]);
+        setMockForm({ ...mockForm, name: '' });
+        showToast('Mock Test logged to Analytics Matrix!');
+      };
+
+      const deleteMock = (id) => {
+        setMocks((prev) => prev.filter((m) => m.id !== id));
+        showToast('Mock entry removed.');
+      };
+
+      const boostMyHours = () => {
+        setPeers((prev) =>
+          prev.map((p) =>
+            p.id === 'p4'
+              ? {
+                  ...p,
+                  hoursToday: +(p.hoursToday + 0.5).toFixed(1),
+                  status: `Active Deep Work Session (${+(p.hoursToday + 0.5).toFixed(1)}h logged)`
+                }
+              : p
+          )
+        );
+        showToast('+0.5 Hours logged to Peer Accountability Board!');
+      };
+
+      const filteredSyllabus = syllabus.filter((item) => {
+        const matchesPaper = selectedPaper === 'ALL' || item.paper === selectedPaper;
+        const matchesSearch =
+          item.topic.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.subject.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesPaper && matchesSearch;
+      });
+
+      const filteredNotes = notes.filter((n) => {
+        const matchesCategory =
+          selectedNoteCategory === 'ALL' || n.category === selectedNoteCategory;
+        const matchesSearch =
+          n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          n.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (n.subFolder && n.subFolder.toLowerCase().includes(searchQuery.toLowerCase()));
+        return matchesCategory && matchesSearch;
+      });
+
+      // Render Login Portal if not logged in
+      if (!isLoggedIn) {
+        return (
+          <div className={darkMode ? 'dark' : ''}>
+            <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
+              <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl space-y-6">
+                <div className="text-center space-y-2">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-600 to-amber-500 flex items-center justify-center text-white font-bold mx-auto shadow-lg">
+                    <Icon name="award" className="w-8 h-8" />
+                  </div>
+                  <h1 className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-400 to-amber-400 bg-clip-text text-transparent">
+                    UPSC 360° Secure Vault
+                  </h1>
+                  <p className="text-xs text-slate-400">
+                    Sign in with your officer account to sync and protect your progress across all sessions.
+                  </p>
+                </div>
+
+                {authError && (
+                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs text-center font-medium">
+                    {authError}
+                  </div>
+                )}
+
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div>
+                    <label className="text-xs font-semibold text-slate-400 block mb-1.5">Username</label>
+                    <input
+                      type="text"
+                      value={usernameInput}
+                      onChange={(e) => setUsernameInput(e.target.value)}
+                      placeholder="Enter username (x7ansh)"
+                      className="w-full px-4 py-3 text-sm rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-slate-400 block mb-1.5">Password</label>
+                    <input
+                      type="password"
+                      value={passwordInput}
+                      onChange={(e) => setPasswordInput(e.target.value)}
+                      placeholder="Enter password (727830)"
+                      className="w-full px-4 py-3 text-sm rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-amber-500 hover:from-indigo-500 hover:to-amber-400 text-white font-bold text-sm shadow-lg transition transform active:scale-95"
+                  >
+                    Unlock Officer Vault
+                  </button>
+                </form>
+
+                <div className="pt-4 border-t border-slate-800 flex flex-col items-center gap-2 text-center text-xs text-slate-500">
+                  <div>
+                    Default Credentials: Username <span className="text-indigo-400 font-mono">x7ansh</span> | Password <span className="text-amber-400 font-mono">727830</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={fillDemoCredentials}
+                    className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 underline transition"
+                  >
+                    Click to Auto-Fill Credentials
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className={darkMode ? 'dark' : ''}>
+          <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200">
+            
+            {/* Toast Notification */}
+            {notification && (
+              <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2 bg-indigo-600 text-white px-4 py-3 rounded-xl shadow-xl border border-indigo-400/30 animate-bounce">
+                <Icon name="check" className="w-4 h-4" />
+                <span className="text-sm font-medium">{notification}</span>
+              </div>
+            )}
+
+            {/* Top Navigation Command Bar */}
+            <header className="sticky top-0 z-30 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-amber-500 flex items-center justify-center text-white font-bold shadow-md">
+                    <Icon name="award" className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h1 className="text-lg font-extrabold tracking-tight bg-gradient-to-r from-indigo-600 to-amber-500 bg-clip-text text-transparent">
+                        UPSC 360°
+                      </h1>
+                      <span className="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                        CSE Command Centre
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">
+                      Prelims • GS Mains • {selectedOptional.split(' ')[0]} Optional • Notes Vault
+                    </p>
+                  </div>
+                </div>
+
+                {/* Live Exam Countdown & Quick Timer Pill */}
+                <div className="flex items-center gap-2.5">
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 border border-rose-500/20 transition"
+                    title="Lock account vault"
+                  >
+                    <span>x7ansh (Logout)</span>
+                  </button>
+
+                  <div
+                    className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
+                      syncStatus === 'synced'
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                        : syncStatus === 'saving'
+                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                        : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                    }`}
+                  >
+                    <Icon name="cloud" className="w-4 h-4" />
+                    <span>
+                      {syncStatus === 'synced'
+                        ? 'Synced to Vault'
+                        : syncStatus === 'saving'
+                        ? 'Saving...'
+                        : 'Sync Issue'}
+                    </span>
+                  </div>
+
+                  <div className="hidden lg:flex items-center gap-4 bg-slate-100 dark:bg-slate-800/80 px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700/70">
+                    <div className="text-right">
+                      <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Active Optional</span>
+                      <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
+                        {selectedOptional.split(' ')[0]} ({optionalProgress}%)
+                      </span>
+                    </div>
+                    <div className="h-6 w-px bg-slate-300 dark:bg-slate-700" />
+                    <div className="flex items-center gap-2">
+                      <Icon name="clock" className="w-4 h-4 text-amber-500" />
+                      <span className="font-mono text-sm font-bold">{formatTime(timerSeconds)}</span>
+                      <button
+                        onClick={() => setTimerRunning(!timerRunning)}
+                        className="p-1 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 transition"
+                        title={timerRunning ? 'Pause Timer' : 'Start Timer'}
+                      >
+                        <Icon name={timerRunning ? 'pause' : 'play'} className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleExportBackup}
+                    className="hidden sm:flex items-center gap-1 px-2.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-indigo-500/10 hover:text-indigo-500 border border-slate-200 dark:border-slate-700 transition"
+                    title="Download a backup file of all your notes and progress"
+                  >
+                    <Icon name="download" className="w-3.5 h-3.5" />
+                    Backup
+                  </button>
+                  <button
+                    onClick={() => backupInputRef.current?.click()}
+                    className="hidden sm:flex items-center gap-1 px-2.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-indigo-500/10 hover:text-indigo-500 border border-slate-200 dark:border-slate-700 transition"
+                    title="Restore progress from a downloaded backup file"
+                  >
+                    <Icon name="upload" className="w-3.5 h-3.5" />
+                    Restore
+                  </button>
+                  <input
+                    ref={backupInputRef}
+                    type="file"
+                    accept=".json"
+                    onChange={handleImportBackup}
+                    className="hidden"
+                  />
+
+                  <button
+                    onClick={resetAllProgressToZero}
+                    className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-rose-500/10 hover:text-rose-500 border border-slate-200 dark:border-slate-700 transition"
+                    title="Reset all syllabus & task progress to 0%"
+                  >
+                    Reset to 0%
+                  </button>
+
+                  <button
+                    onClick={() => setDarkMode(!darkMode)}
+                    className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+                    aria-label="Toggle theme"
+                  >
+                    <Icon name={darkMode ? 'sun' : 'moon'} className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Module Navigation Bar */}
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex overflow-x-auto no-scrollbar border-t border-slate-100 dark:border-slate-800/60">
+                {[
+                  { id: 'dashboard', label: 'War Room Overview', icon: 'dashboard' },
+                  { id: 'syllabus', label: `GS + CSAT Syllabus (${syllabusProgress}%)`, icon: 'layers' },
+                  { id: 'optional', label: 'UPSC Optional Hub', icon: 'compass' },
+                  { id: 'notes', label: 'Upload & Notes Vault', icon: 'upload' },
+                  { id: 'mocks', label: 'Prelims & Mains Lab', icon: 'table' },
+                  { id: 'peers', label: 'Study Sangha', icon: 'users' }
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
+                      activeTab === tab.id
+                        ? 'border-indigo-600 text-indigo-600 dark:border-amber-400 dark:text-amber-400'
+                        : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    <Icon name={tab.icon} className="w-4 h-4" />
+                    <span>{tab.label}</span>
+                  </button>
+                ))}
+              </div>
+            </header>
+
+            {/* Main Workspace Container */}
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+              
+              {/* TAB 1: WAR ROOM DASHBOARD */}
+              {activeTab === 'dashboard' && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">GS + CSAT Mastery</span>
+                        <span className="p-2 rounded-xl bg-indigo-500/10 text-indigo-500">
+                          <Icon name="layers" className="w-5 h-5" />
+                        </span>
+                      </div>
+                      <div className="mt-3 flex items-baseline justify-between">
+                        <h2 className="text-3xl font-extrabold">{syllabusProgress}%</h2>
+                        <button
+                          onClick={() => setActiveTab('syllabus')}
+                          className="text-xs text-indigo-500 hover:underline font-semibold"
+                        >
+                          Update Stages →
+                        </button>
+                      </div>
+                      <div className="mt-3 w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-indigo-500 to-amber-500 rounded-full transition-all duration-500"
+                          style={{ width: `${syllabusProgress}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                          Optional ({selectedOptional.split(' ')[0]})
+                        </span>
+                        <span className="p-2 rounded-xl bg-amber-500/10 text-amber-500">
+                          <Icon name="compass" className="w-5 h-5" />
+                        </span>
+                      </div>
+                      <div className="mt-3 flex items-baseline justify-between">
+                        <h2 className="text-3xl font-extrabold">{optionalProgress}%</h2>
+                        <button
+                          onClick={() => setActiveTab('optional')}
+                          className="text-xs text-amber-500 hover:underline font-semibold"
+                        >
+                          Paper I & II →
+                        </button>
+                      </div>
+                      <div className="mt-3 w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-amber-500 to-emerald-500 rounded-full transition-all duration-500"
+                          style={{ width: `${optionalProgress}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Daily Directives</span>
+                        <span className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
+                          <Icon name="target" className="w-5 h-5" />
+                        </span>
+                      </div>
+                      <div className="mt-3 flex items-baseline justify-between">
+                        <h2 className="text-3xl font-extrabold">
+                          {completedTasksCount}/{tasks.length}
+                        </h2>
+                        <span className="text-xs text-emerald-500 font-semibold">
+                          {tasks.length > 0 ? Math.round((completedTasksCount / tasks.length) * 100) : 0}% Done
+                        </span>
+                      </div>
+                      <div className="mt-3 w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                          style={{
+                            width: `${tasks.length > 0 ? Math.round((completedTasksCount / tasks.length) * 100) : 0}%`
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Uploaded Notes Vault</span>
+                        <span className="p-2 rounded-xl bg-purple-500/10 text-purple-500">
+                          <Icon name="upload" className="w-5 h-5" />
+                        </span>
+                      </div>
+                      <div className="mt-3 flex items-baseline justify-between">
+                        <h2 className="text-3xl font-extrabold">{notes.length}</h2>
+                        <button
+                          onClick={() => setActiveTab('notes')}
+                          className="text-xs text-purple-400 hover:underline font-semibold"
+                        >
+                          + Upload Files →
+                        </button>
+                      </div>
+                      <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+                        {uploadedFilesCount} file(s) uploaded into categories
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Left 2 Columns: Today's Tactical Directives */}
+                    <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5">
+                        <div>
+                          <h3 className="text-base font-bold flex items-center gap-2">
+                            <Icon name="target" className="w-5 h-5 text-indigo-500" />
+                            Today’s Micro-Schedule & Targets (Starts at 0%)
+                          </h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            Check off your daily GS, Optional, and PYQ targets to build your real progress
+                          </p>
+                        </div>
+                      </div>
+
+                      <form onSubmit={handleAddTask} className="flex flex-col sm:flex-row gap-2 mb-5">
+                        <input
+                          type="text"
+                          value={newTaskTitle}
+                          onChange={(e) => setNewTaskTitle(e.target.value)}
+                          placeholder="Add study target (e.g., Optional Paper-I Thinkers + 20 PYQs)..."
+                          className="flex-1 px-3.5 py-2.5 text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <div className="flex gap-2">
+                          <select
+                            value={newTaskTag}
+                            onChange={(e) => setNewTaskTag(e.target.value)}
+                            className="px-3 py-2.5 text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none"
+                          >
+                            <option value="GS-I">GS-I</option>
+                            <option value="GS-II">GS-II</option>
+                            <option value="GS-III">GS-III</option>
+                            <option value="GS-IV">GS-IV</option>
+                            <option value="Optional">Optional</option>
+                            <option value="Essay">Essay</option>
+                            <option value="CSAT">CSAT</option>
+                            <option value="Current Affairs">Current Affairs</option>
+                          </select>
+                          <button
+                            type="submit"
+                            className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold flex items-center gap-1.5 transition"
+                          >
+                            <Icon name="plus" className="w-4 h-4" />
+                            Add
+                          </button>
+                        </div>
+                      </form>
+
+                      <div className="space-y-2.5">
+                        {tasks.map((task) => (
+                          <div
+                            key={task.id}
+                            className={`flex items-center justify-between p-3.5 rounded-xl border transition ${
+                              task.completed
+                                ? 'bg-slate-50/70 dark:bg-slate-800/30 border-slate-200/60 dark:border-slate-800/60 opacity-65'
+                                : 'bg-white dark:bg-slate-800/70 border-slate-200 dark:border-slate-700/80 hover:border-indigo-500/40'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <button
+                                onClick={() => toggleTask(task.id)}
+                                className={`w-5 h-5 rounded-md flex items-center justify-center border transition ${
+                                  task.completed
+                                    ? 'bg-emerald-500 border-emerald-500 text-white'
+                                    : 'border-slate-300 dark:border-slate-600 hover:border-indigo-500'
+                                }`}
+                              >
+                                {task.completed && <Icon name="check" className="w-3.5 h-3.5" />}
+                              </button>
+                              <span
+                                className={`text-sm font-medium truncate ${
+                                  task.completed ? 'line-through text-slate-400' : ''
+                                }`}
+                              >
+                                {task.title}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0 ml-2">
+                              <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                                {task.tag}
+                              </span>
+                              <button
+                                onClick={() => deleteTask(task.id)}
+                                className="p-1 text-slate-400 hover:text-rose-500 transition"
+                                title="Delete task"
+                              >
+                                <Icon name="trash" className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Right Column: Deep Work Pomodoro & Exam Simulation Timer */}
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-base font-bold flex items-center gap-2">
+                            <Icon name="clock" className="w-5 h-5 text-amber-500" />
+                            Focus & Exam Simulator
+                          </h3>
+                          <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-500 font-semibold">
+                            {timerMode}
+                          </span>
+                        </div>
+
+                        <div className="my-6 py-8 rounded-2xl bg-slate-900 dark:bg-slate-950 text-white text-center border border-slate-800 shadow-inner">
+                          <div className="text-5xl font-mono font-extrabold tracking-wider text-amber-400">
+                            {formatTime(timerSeconds)}
+                          </div>
+                          <p className="text-xs text-slate-400 mt-2">
+                            {timerRunning ? 'Deep Focus Mode Active — Zero Distractions' : 'Select a preset & begin session'}
+                          </p>
+
+                          <div className="mt-6 flex justify-center gap-3">
+                            <button
+                              onClick={() => setTimerRunning(!timerRunning)}
+                              className={`px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 transition ${
+                                timerRunning
+                                  ? 'bg-amber-500 text-slate-950 hover:bg-amber-400'
+                                  : 'bg-indigo-600 text-white hover:bg-indigo-500'
+                              }`}
+                            >
+                              <Icon name={timerRunning ? 'pause' : 'play'} className="w-4 h-4" />
+                              {timerRunning ? 'Pause' : 'Start Focus'}
+                            </button>
+                            <button
+                              onClick={() => setPresetTimer(50, '50m Deep Work')}
+                              className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+                              title="Reset Timer"
+                            >
+                              <Icon name="refresh" className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 block">
+                            UPSC Session Presets
+                          </span>
+                          <div className="grid grid-cols-3 gap-2">
+                            <button
+                              onClick={() => setPresetTimer(25, '25m Rapid Revision')}
+                              className="px-2.5 py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-indigo-500/10 hover:text-indigo-500 border border-slate-200 dark:border-slate-700 transition"
+                            >
+                              25m Sprint
+                            </button>
+                            <button
+                              onClick={() => setPresetTimer(50, '50m Deep Study')}
+                              className="px-2.5 py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-indigo-500/10 hover:text-indigo-500 border border-slate-200 dark:border-slate-700 transition"
+                            >
+                              50m Study
+                            </button>
+                            <button
+                              onClick={() => setPresetTimer(180, '3Hr Mains Paper')}
+                              className="px-2.5 py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-amber-500/10 hover:text-amber-500 border border-slate-200 dark:border-slate-700 transition"
+                            >
+                              3Hr Mains
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
+                        <span>Mains Answer Speed Benchmark:</span>
+                        <span className="font-bold text-slate-700 dark:text-slate-300">7.5 mins / 150 words</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: 360° GS + CSAT SYLLABUS MATRIX */}
+              {activeTab === 'syllabus' && (
+                <div className="space-y-6">
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                      <div>
+                        <h2 className="text-lg font-bold flex items-center gap-2">
+                          <Icon name="layers" className="w-5 h-5 text-indigo-500" />
+                          360° GS, Essay & CSAT Syllabus Tracker ({syllabusProgress}% Complete)
+                        </h2>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          All topics start at 0/4 (Unread). Click any topic’s stage badge to advance its revision state!
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="relative">
+                          <Icon name="search" className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                          <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Filter syllabus topics..."
+                            className="pl-9 pr-3 py-1.5 text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none"
+                          />
+                        </div>
+                        {['ALL', 'GS-I', 'GS-II', 'GS-III', 'GS-IV', 'Essay', 'CSAT'].map((paper) => (
+                          <button
+                            key={paper}
+                            onClick={() => setSelectedPaper(paper)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                              selectedPaper === paper
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
+                            }`}
+                          >
+                            {paper}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                            <th className="py-3 px-4">Paper</th>
+                            <th className="py-3 px-4">Subject Block</th>
+                            <th className="py-3 px-4">High-Yield Micro Topic</th>
+                            <th className="py-3 px-4">PYQ Weightage (10 Yrs)</th>
+                            <th className="py-3 px-4 text-right">Mastery Stage (Click to Advance)</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-sm">
+                          {filteredSyllabus.map((item) => {
+                            const stageInfo = STAGES[item.stage] || STAGES[0];
+                            return (
+                              <tr
+                                key={item.id}
+                                className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition"
+                              >
+                                <td className="py-3.5 px-4 font-bold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
+                                  {item.paper}
+                                </td>
+                                <td className="py-3.5 px-4 font-semibold whitespace-nowrap">
+                                  {item.subject}
+                                </td>
+                                <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">
+                                  {item.topic}
+                                </td>
+                                <td className="py-3.5 px-4">
+                                  <span className="text-xs font-mono px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800">
+                                    {item.pyqCount} Qs
+                                  </span>
+                                </td>
+                                <td className="py-3.5 px-4 text-right">
+                                  <button
+                                    onClick={() => cycleTopicStage(item.id)}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition transform active:scale-95 ${stageInfo.color}`}
+                                  >
+                                    {stageInfo.label} ({item.stage}/4)
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: UPSC OPTIONAL SUBJECT HUB */}
+              {activeTab === 'optional' && (
+                <div className="space-y-6">
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                            500 Marks Mains Decider
+                          </span>
+                          <span className="text-xs text-slate-400">Paper-I (250M) + Paper-II (250M)</span>
+                        </div>
+                        <h2 className="text-xl font-extrabold mt-1 flex items-center gap-2">
+                          <Icon name="compass" className="w-6 h-6 text-amber-500" />
+                          UPSC Optional Subject Command Hub
+                        </h2>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          Choose your Optional Subject below, track Paper-I & Paper-II unit mastery from 0%, and build your Scholar/Thinker quote bank.
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div>
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                            Select Your UPSC Optional
+                          </label>
+                          <select
+                            value={selectedOptional}
+                            onChange={(e) => setSelectedOptional(e.target.value)}
+                            className="px-4 py-2.5 text-sm font-bold rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-amber-400 focus:outline-none"
+                          >
+                            {Object.keys(OPTIONAL_CATALOG).map((optName) => (
+                              <option key={optName} value={optName}>
+                                {optName}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="bg-slate-100 dark:bg-slate-800/90 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-right">
+                          <span className="text-[10px] uppercase tracking-wider text-slate-400 block">
+                            Optional Mastery
+                          </span>
+                          <span className="text-xl font-extrabold text-emerald-500">
+                            {optionalProgress}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                            <th className="py-3 px-4">Paper</th>
+                            <th className="py-3 px-4">Section / Unit</th>
+                            <th className="py-3 px-4">Core Syllabus Micro-Topics</th>
+                            <th className="py-3 px-4">10-Yr PYQs</th>
+                            <th className="py-3 px-4 text-right">Mastery Stage (Click to Advance)</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-sm">
+                          {currentOptionalTopics.map((item) => {
+                            const stageInfo = STAGES[item.stage] || STAGES[0];
+                            return (
+                              <tr
+                                key={item.id}
+                                className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition"
+                              >
+                                <td className="py-3.5 px-4 font-bold whitespace-nowrap">
+                                  <span
+                                    className={`px-2.5 py-1 rounded-lg text-xs ${
+                                      item.paper === 'Paper-I'
+                                        ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
+                                        : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                    }`}
+                                  >
+                                    {item.paper}
+                                  </span>
+                                </td>
+                                <td className="py-3.5 px-4 font-semibold whitespace-nowrap">
+                                  {item.section}
+                                </td>
+                                <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">
+                                  {item.topic}
+                                </td>
+                                <td className="py-3.5 px-4">
+                                  <span className="text-xs font-mono px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800">
+                                    {item.pyqCount} Qs
+                                  </span>
+                                </td>
+                                <td className="py-3.5 px-4 text-right">
+                                  <button
+                                    onClick={() => cycleOptionalStage(item.id)}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition transform active:scale-95 ${stageInfo.color}`}
+                                  >
+                                    {stageInfo.label} ({item.stage}/4)
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <form
+                      onSubmit={handleAddOptionalTopic}
+                      className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row gap-2.5"
+                    >
+                      <select
+                        value={newOptionalTopic.paper}
+                        onChange={(e) => setNewOptionalTopic({ ...newOptionalTopic, paper: e.target.value })}
+                        className="px-3 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                      >
+                        <option value="Paper-I">Paper-I</option>
+                        <option value="Paper-II">Paper-II</option>
+                      </select>
+                      <input
+                        type="text"
+                        value={newOptionalTopic.section}
+                        onChange={(e) => setNewOptionalTopic({ ...newOptionalTopic, section: e.target.value })}
+                        placeholder="Unit Name (e.g., Unit 4: State & Power)"
+                        className="sm:w-64 px-3.5 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                      />
+                      <input
+                        type="text"
+                        value={newOptionalTopic.topic}
+                        onChange={(e) => setNewOptionalTopic({ ...newOptionalTopic, topic: e.target.value })}
+                        placeholder="Add custom micro-topic for your Optional..."
+                        className="flex-1 px-3.5 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                      />
+                      <button
+                        type="submit"
+                        className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold flex items-center justify-center gap-1.5 transition"
+                      >
+                        <Icon name="plus" className="w-4 h-4" />
+                        Add Optional Unit
+                      </button>
+                    </form>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm h-fit">
+                      <h3 className="text-base font-bold flex items-center gap-2 mb-1">
+                        <Icon name="book" className="w-5 h-5 text-amber-500" />
+                        Add Optional Scholar / Thinker Quote
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                        Quoting scholars directly boosts Optional marks from 240 to 300+
+                      </p>
+                      <form onSubmit={handleAddThinker} className="space-y-3">
+                        <div>
+                          <label className="text-xs font-semibold text-slate-400 block mb-1">
+                            Scholar / Thinker / Committee Name
+                          </label>
+                          <input
+                            type="text"
+                            value={newThinker.scholar}
+                            onChange={(e) => setNewThinker({ ...newThinker, scholar: e.target.value })}
+                            placeholder="e.g., C. Raja Mohan / Andre Beteille"
+                            className="w-full px-3.5 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-slate-400 block mb-1">Paper Tag</label>
+                          <select
+                            value={newThinker.paper}
+                            onChange={(e) => setNewThinker({ ...newThinker, paper: e.target.value })}
+                            className="w-full px-3 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                          >
+                            <option value="Paper-I">Optional Paper-I</option>
+                            <option value="Paper-II">Optional Paper-II</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-slate-400 block mb-1">
+                            Core Argument / Verbatim Quote
+                          </label>
+                          <textarea
+                            rows="3"
+                            value={newThinker.quote}
+                            onChange={(e) => setNewThinker({ ...newThinker, quote: e.target.value })}
+                            placeholder="Enter thinker's key concept or quote to revise before Mains..."
+                            className="w-full px-3.5 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                          />
+                        </div>
+                        <button
+                          type="submit"
+                          className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm transition"
+                        >
+                          Save to Thinker Bank
+                        </button>
+                      </form>
+                    </div>
+
+                    <div className="lg:col-span-2 space-y-3">
+                      {optionalThinkers.map((t) => (
+                        <div
+                          key={t.id}
+                          className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between"
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-bold text-sm text-indigo-600 dark:text-amber-400">
+                              {t.scholar}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800">
+                                {t.paper}
+                              </span>
+                              <button
+                                onClick={() => deleteThinker(t.id)}
+                                className="p-1 text-slate-400 hover:text-rose-500 transition"
+                                title="Remove Thinker"
+                              >
+                                <Icon name="trash" className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                          <p className="text-sm italic text-slate-600 dark:text-slate-300">
+                            “{t.quote}”
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 4: UPLOAD & CATEGORIZED NOTES VAULT */}
+              {activeTab === 'notes' && (
+                <div className="space-y-6">
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
+                      <div>
+                        <h2 className="text-lg font-bold flex items-center gap-2">
+                          <Icon name="upload" className="w-5 h-5 text-indigo-500" />
+                          Upload Your Notes & Documents into Categories
+                        </h2>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Select a target UPSC category & folder below, then upload PDFs, Handwritten Scans, Word Docs, or Text/Markdown files.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div>
+                        <label className="text-xs font-semibold text-slate-400 block mb-1">
+                          1. Choose Target UPSC Category
+                        </label>
+                        <select
+                          value={uploadCategory}
+                          onChange={(e) => setUploadCategory(e.target.value)}
+                          className="w-full px-3.5 py-2.5 text-sm font-semibold rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none"
+                        >
+                          {NOTE_CATEGORIES.map((cat) => (
+                            <option key={cat} value={cat}>
+                              {cat}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-semibold text-slate-400 block mb-1">
+                          2. Custom Sub-Folder / Subject Tag
+                        </label>
+                        <input
+                          type="text"
+                          value={uploadSubFolder}
+                          onChange={(e) => setUploadSubFolder(e.target.value)}
+                          placeholder="e.g., Laxmikanth Short Notes / Spectrum / Toppers Copy"
+                          className="w-full px-3.5 py-2.5 text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none"
+                        />
+                      </div>
+
+                      <div className="flex items-end">
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm flex items-center justify-center gap-2 transition shadow-sm"
+                        >
+                          <Icon name="upload" className="w-4 h-4" />
+                          Browse & Upload Files
+                        </button>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          multiple
+                          accept=".pdf,.doc,.docx,.txt,.md,.png,.jpg,.jpeg,.csv"
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+                      </div>
+                    </div>
+
+                    <div
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setDragActive(true);
+                      }}
+                      onDragLeave={() => setDragActive(false)}
+                      onDrop={handleDrop}
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`cursor-pointer border-2 border-dashed rounded-2xl p-6 text-center transition ${
+                        dragActive
+                          ? 'border-indigo-500 bg-indigo-500/10'
+                          : 'border-slate-300 dark:border-slate-700 hover:border-indigo-500/60 bg-slate-50/60 dark:bg-slate-800/40'
+                      }`}
+                    >
+                      <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center mx-auto mb-2">
+                        <Icon name="upload" className="w-6 h-6" />
+                      </div>
+                      <p className="text-sm font-bold">
+                        Drag & drop your UPSC files here, or click to select from device
+                      </p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Supports PDF, TXT, Markdown, DOCX, JPG/PNG Handwritten Note Scans — Automatically filed under{' '}
+                        <span className="text-indigo-500 dark:text-amber-400 font-semibold">{uploadCategory}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm h-fit">
+                      <h3 className="text-base font-bold flex items-center gap-2 mb-1">
+                        <Icon name="edit" className="w-5 h-5 text-indigo-500" />
+                        Write Categorized Digital Note
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                        Synthesize editorials or optional notes directly into any category
+                      </p>
+
+                      <form onSubmit={handleAddNote} className="space-y-3.5">
+                        <div>
+                          <label className="text-xs font-semibold text-slate-400 block mb-1">Topic Headline</label>
+                          <input
+                            type="text"
+                            value={newNote.title}
+                            onChange={(e) => setNewNote({ ...newNote, title: e.target.value })}
+                            placeholder="e.g., Urban Flood Management & Sponge Cities"
+                            className="w-full px-3.5 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-semibold text-slate-400 block mb-1">Target Category</label>
+                          <select
+                            value={newNote.category}
+                            onChange={(e) => setNewNote({ ...newNote, category: e.target.value })}
+                            className="w-full px-3 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                          >
+                            {NOTE_CATEGORIES.map((cat) => (
+                              <option key={cat} value={cat}>
+                                {cat}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-xs font-semibold text-slate-400 block mb-1">Sub-Folder</label>
+                            <input
+                              type="text"
+                              value={newNote.subFolder}
+                              onChange={(e) => setNewNote({ ...newNote, subFolder: e.target.value })}
+                              placeholder="e.g., Polity / IR"
+                              className="w-full px-3 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-semibold text-slate-400 block mb-1">Source</label>
+                            <select
+                              value={newNote.source}
+                              onChange={(e) => setNewNote({ ...newNote, source: e.target.value })}
+                              className="w-full px-3 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                            >
+                              <option value="The Hindu">The Hindu</option>
+                              <option value="Indian Express">Indian Express</option>
+                              <option value="PIB / PRS">PIB / PRS</option>
+                              <option value="Standard Book">Standard Book</option>
+                              <option value="Optional Class">Optional Class</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-semibold text-slate-400 block mb-1">
+                            Mains / Optional Fodder (Facts, Articles, Scholars)
+                          </label>
+                          <textarea
+                            rows="4"
+                            value={newNote.content}
+                            onChange={(e) => setNewNote({ ...newNote, content: e.target.value })}
+                            placeholder="Write crisp bullet points, constitutional articles, Supreme Court judgments, or data points..."
+                            className="w-full px-3.5 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-semibold text-slate-400 block mb-1">
+                            Keywords (Comma separated)
+                          </label>
+                          <input
+                            type="text"
+                            value={newNote.keywords}
+                            onChange={(e) => setNewNote({ ...newNote, keywords: e.target.value })}
+                            placeholder="NDMA, SDG-11, Urbanization"
+                            className="w-full px-3.5 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                          />
+                        </div>
+
+                        <button
+                          type="submit"
+                          className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition"
+                        >
+                          Save to Categorized Vault
+                        </button>
+                      </form>
+                    </div>
+
+                    <div className="lg:col-span-2 space-y-4">
+                      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                            Filter Vault by Category ({filteredNotes.length} items)
+                          </span>
+                          <div className="relative">
+                            <Icon name="search" className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                            <input
+                              type="text"
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              placeholder="Search uploaded files or notes..."
+                              className="pl-9 pr-3 py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-1.5">
+                          <button
+                            onClick={() => setSelectedNoteCategory('ALL')}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                              selectedNoteCategory === 'ALL'
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                            }`}
+                          >
+                            All Categories ({notes.length})
+                          </button>
+                          {NOTE_CATEGORIES.map((cat) => (
+                            <button
+                              key={cat}
+                              onClick={() => setSelectedNoteCategory(cat)}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+                                selectedNoteCategory === cat
+                                  ? 'bg-indigo-600 text-white'
+                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
+                              }`}
+                            >
+                              {cat.split(' (')[0]}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {filteredNotes.map((note) => (
+                        <div
+                          key={note.id}
+                          className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm hover:border-indigo-500/40 transition"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                                {note.category}
+                              </span>
+                              {note.subFolder && (
+                                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                                  <Icon name="folder" className="w-3 h-3" />
+                                  {note.subFolder}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-slate-400">
+                                {note.source} • {note.date}
+                              </span>
+                              <button
+                                onClick={() => deleteNote(note.id)}
+                                className="p-1 text-slate-400 hover:text-rose-500 transition"
+                                title="Delete note"
+                              >
+                                <Icon name="trash" className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+
+                          <h4 className="text-base font-bold mb-2 flex items-center gap-2">
+                            {note.fileAttachment && (
+                              <Icon name="file" className="w-4 h-4 text-emerald-500 shrink-0" />
+                            )}
+                            {note.title}
+                          </h4>
+
+                          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-line">
+                            {note.content}
+                          </p>
+
+                          {note.fileAttachment && (
+                            <div className="mt-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <span className="px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 font-mono text-xs font-bold">
+                                  {note.fileAttachment.type}
+                                </span>
+                                <div className="truncate">
+                                  <p className="text-xs font-bold truncate">{note.fileAttachment.name}</p>
+                                  <p className="text-[11px] text-slate-400">{note.fileAttachment.size}</p>
+                                </div>
+                              </div>
+                              <a
+                                href={note.fileAttachment.url}
+                                download={note.fileAttachment.name}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 shrink-0 transition"
+                              >
+                                <Icon name="download" className="w-3.5 h-3.5" />
+                                Open / Download File
+                              </a>
+                            </div>
+                          )}
+
+                          <div className="mt-4 flex flex-wrap gap-1.5">
+                            {(note.keywords || []).map((kw, i) => (
+                              <span
+                                key={i}
+                                className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                              >
+                                #{kw}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 5: PRELIMS & MAINS LAB */}
+              {activeTab === 'mocks' && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <h3 className="text-base font-bold flex items-center gap-2 mb-1">
+                      <Icon name="table" className="w-5 h-5 text-amber-500" />
+                      Prelims OMR Negative Marking Calculator
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">
+                      Exact UPSC Marking Scheme: +2.00 for Correct, -0.66 (1/3rd) for Incorrect
+                    </p>
+
+                    <form onSubmit={handleLogMock} className="space-y-4">
+                      <div>
+                        <label className="text-xs font-semibold text-slate-400 block mb-1">
+                          Mock Test Name
+                        </label>
+                        <input
+                          type="text"
+                          value={mockForm.name}
+                          onChange={(e) => setMockForm({ ...mockForm, name: e.target.value })}
+                          placeholder="e.g., Vision FL-4 / PYQ 2025 Paper"
+                          className="w-full px-3.5 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-semibold text-emerald-500 block mb-1">
+                            Correct Qs (+2)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={mockForm.correct}
+                            onChange={(e) => setMockForm({ ...mockForm, correct: e.target.value })}
+                            className="w-full px-3.5 py-2 text-sm font-bold rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-rose-500 block mb-1">
+                            Incorrect Qs (-0.66)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={mockForm.incorrect}
+                            onChange={(e) => setMockForm({ ...mockForm, incorrect: e.target.value })}
+                            className="w-full px-3.5 py-2 text-sm font-bold rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-slate-900 text-white border border-slate-800">
+                        <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+                          <span>Total Attempted: {Number(mockForm.correct) + Number(mockForm.incorrect)} / 100</span>
+                          <span>Skipped: {liveUnattempted}</span>
+                        </div>
+                        <div className="flex items-baseline justify-between mt-2">
+                          <span className="text-xs uppercase tracking-wider text-slate-400">Net UPSC Score:</span>
+                          <span
+                            className={`text-3xl font-extrabold font-mono ${
+                              Number(liveCalcScore) >= 95 ? 'text-emerald-400' : 'text-amber-400'
+                            }`}
+                          >
+                            {liveCalcScore} / 200
+                          </span>
+                        </div>
+                        <div className="mt-2 text-[11px] text-slate-400">
+                          {Number(liveCalcScore) >= 95
+                            ? 'Safe Zone: Above recent General Category cut-offs!'
+                            : 'Borderline Zone: Reduce wild guesses to minimize negative penalty.'}
+                        </div>
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition"
+                      >
+                        Save Score to Mock Log
+                      </button>
+                    </form>
+                  </div>
+
+                  <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <h3 className="text-base font-bold mb-1">Prelims Mock Performance Trajectory</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">
+                      Track accuracy ratio and negative penalty across full-length tests
+                    </p>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                            <th className="py-3 px-4">Test Name</th>
+                            <th className="py-3 px-4">Date</th>
+                            <th className="py-3 px-4">Attempted</th>
+                            <th className="py-3 px-4">Correct / Wrong</th>
+                            <th className="py-3 px-4 text-right">Net Score</th>
+                            <th className="py-3 px-2 text-right"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-sm">
+                          {mocks.map((m) => {
+                            const net = calcPrelimsScore(m.correct, m.incorrect);
+                            const attempted = m.correct + m.incorrect;
+                            return (
+                              <tr key={m.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                                <td className="py-3.5 px-4 font-semibold">{m.name}</td>
+                                <td className="py-3.5 px-4 text-xs text-slate-400">{m.date}</td>
+                                <td className="py-3.5 px-4 font-mono text-xs">{attempted}/100</td>
+                                <td className="py-3.5 px-4 text-xs">
+                                  <span className="text-emerald-500 font-bold">{m.correct}✓</span>
+                                  {' / '}
+                                  <span className="text-rose-500 font-bold">{m.incorrect}✗</span>
+                                </td>
+                                <td className="py-3.5 px-4 text-right font-mono font-bold text-base text-indigo-600 dark:text-amber-400">
+                                  {net}
+                                </td>
+                                <td className="py-3.5 px-2 text-right">
+                                  <button
+                                    onClick={() => deleteMock(m.id)}
+                                    className="p-1 text-slate-400 hover:text-rose-500 transition"
+                                    title="Delete mock entry"
+                                  >
+                                    <Icon name="trash" className="w-4 h-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 6: STUDY SANGHA & PEERS */}
+              {activeTab === 'peers' && (
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div>
+                      <h3 className="text-lg font-bold flex items-center gap-2">
+                        <Icon name="users" className="w-5 h-5 text-indigo-500" />
+                        Peer Accountability Sangha & Mentor Room
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Real-time study hours and streak leaderboard with your UPSC peer group
+                      </p>
+                    </div>
+                    <button
+                      onClick={boostMyHours}
+                      className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-2 transition self-start"
+                    >
+                      <Icon name="plus" className="w-4 h-4" />
+                      Log +30m Study Session
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {peers.map((peer) => (
+                      <div
+                        key={peer.id}
+                        className={`p-4 rounded-2xl border flex items-center justify-between ${
+                          peer.id === 'p4'
+                            ? 'bg-indigo-500/5 border-indigo-500/40'
+                            : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800'
+                        }`}
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm">{peer.name}</span>
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700">
+                              {peer.role}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">{peer.status}</p>
+                          <p className="text-[11px] font-semibold text-amber-500">
+                            🔥 {peer.streak} Day Consistency Streak
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-2xl font-extrabold font-mono text-indigo-600 dark:text-indigo-400">
+                            {peer.hoursToday}h
+                          </span>
+                          <span className="block text-[10px] uppercase text-slate-400">Logged Today</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+            </main>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
